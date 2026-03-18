@@ -114,3 +114,18 @@ constants/
 - `chore:` setup/config
 - One commit per feature, push after each commit
 - User has git installed — use `git push` directly (no gh CLI needed)
+
+## Deployment — EAS Build (iOS dev build)
+- `eas.json` is configured with a `development` profile (internal distribution)
+- `expo-dev-client` is installed
+- EAS CLI is available via `npx eas-cli` (NOT globally installed — `eas` alone won't work)
+- User's Expo account: aayanareejo1 (same as GitHub username)
+- To build: `npx eas-cli build --profile development --platform ios`
+- To start dev server for dev build: `npx expo start --dev-client`
+- Login: `npx eas-cli login` (verify email on expo.dev before first login)
+- Expo Go limitations: background fetch, task manager, and notifications don't work in Expo Go — requires dev build
+
+## Testing
+- User tests on a physical iOS device
+- Port 8081 sometimes stays occupied after Claude runs expo — use `npx expo start --port 8082` or kill the process first
+- `npx expo start` must be run in user's own terminal (interactive mode required for QR code)
