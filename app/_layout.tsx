@@ -1,5 +1,5 @@
-import React, { useEffect } from 'react';
-import { Stack, Tabs } from 'expo-router';
+import React, { useEffect, useState } from 'react';
+import { Tabs } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { Platform } from 'react-native';
 import {
@@ -8,13 +8,14 @@ import {
   DMSans_500Medium,
   DMSans_300Light,
 } from '@expo-google-fonts/dm-sans';
-import { SplashScreen } from 'expo-router';
+import { SplashScreen, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../constants/colors';
 import {
   setupNotificationChannel,
   registerBackgroundTask,
 } from '../services/notifications';
+import { isOnboarded } from '../services/storage';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -24,6 +25,7 @@ export default function RootLayout() {
     DMSans_500Medium,
     DMSans_300Light,
   });
+  const [onboardingChecked, setOnboardingChecked] = useState(false);
 
   useEffect(() => {
     if (fontsLoaded) {
@@ -32,12 +34,21 @@ export default function RootLayout() {
   }, [fontsLoaded]);
 
   useEffect(() => {
-    // Android notification channel must be created on startup
     setupNotificationChannel();
     registerBackgroundTask();
   }, []);
 
-  if (!fontsLoaded) return null;
+  useEffect(() => {
+    if (!fontsLoaded) return;
+    isOnboarded().then(done => {
+      if (!done) {
+        router.replace('/onboarding');
+      }
+      setOnboardingChecked(true);
+    });
+  }, [fontsLoaded]);
+
+  if (!fontsLoaded || !onboardingChecked) return null;
 
   return (
     <>
@@ -96,6 +107,10 @@ export default function RootLayout() {
               <Ionicons name="settings" size={size} color={color} />
             ),
           }}
+        />
+        <Tabs.Screen
+          name="onboarding"
+          options={{ href: null }} // hide from tab bar
         />
       </Tabs>
     </>

@@ -28,7 +28,7 @@ so you're never caught off guard.
 - [x] Pull-to-refresh on all data screens
 - [x] Skeleton loading states (no spinners)
 - [x] Graceful error handling on all screens
-- [ ] Onboarding flow (welcome → location explanation → permission)
+- [x] Onboarding flow (welcome → location explanation → permission)
 - [ ] Commuter mode (home vs work city weather diff alert)
 - [ ] Daily digest time picker UI
 
@@ -125,4 +125,4 @@ constants/
 
 ## Last Updated
 
-2026-03-18
+2026-03-18 (onboarding added)
