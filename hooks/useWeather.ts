@@ -34,10 +34,12 @@ export function useWeather(
   useEffect(() => {
     if (latitude === null || longitude === null) return;
 
+    const lat = latitude;
+    const lon = longitude;
     const controller = new AbortController();
     abortRef.current = controller;
 
-    const cacheKey = getCacheKey(latitude, longitude);
+    const cacheKey = getCacheKey(lat, lon);
 
     async function load() {
       setIsLoading(true);
@@ -63,7 +65,7 @@ export function useWeather(
       }
 
       try {
-        const fresh = await fetchWeather(latitude, longitude, controller.signal);
+        const fresh = await fetchWeather(lat, lon, controller.signal);
         if (!controller.signal.aborted) {
           setData(fresh);
           setLastUpdated(fresh.fetchedAt);

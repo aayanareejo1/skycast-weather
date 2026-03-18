@@ -63,7 +63,7 @@ export default function AlertsScreen() {
   const { cities } = useCities();
   const [alerts, setAlerts] = useState<AlertItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [rainSensitivity, setRainSensitivity] = useState(Config.RAIN_SENSITIVITY_DEFAULT);
+  const [rainSensitivity, setRainSensitivity] = useState<number>(Config.RAIN_SENSITIVITY_DEFAULT);
 
   const fetchAlerts = useCallback(async () => {
     setIsLoading(true);
