@@ -1,30 +1,66 @@
 {
   "expo": {
-    "name": "weatherapp-temp",
-    "slug": "weatherapp-temp",
+    "name": "SkyCast",
+    "slug": "skycast-weather",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "dark",
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#0A0F1E"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.skycast.weather",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "SkyCast uses your location to show local weather and send timely alerts.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "SkyCast uses your location in the background to monitor weather changes and send alerts.",
+        "UIBackgroundModes": ["fetch", "remote-notification"]
+      }
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/android-icon-foreground.png",
-        "backgroundImage": "./assets/android-icon-background.png",
-        "monochromeImage": "./assets/android-icon-monochrome.png"
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#0A0F1E"
       },
-      "predictiveBackGestureEnabled": false
+      "package": "com.skycast.weather",
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_BACKGROUND_LOCATION",
+        "RECEIVE_BOOT_COMPLETED",
+        "VIBRATE",
+        "POST_NOTIFICATIONS"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-font",
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "SkyCast uses your location to show local weather and send timely alerts.",
+          "locationWhenInUsePermission": "SkyCast uses your location to show local weather.",
+          "isAndroidBackgroundLocationEnabled": true
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#378ADD",
+          "sounds": []
+        }
+      ]
+    ],
+    "scheme": "skycast",
+    "experiments": {
+      "typedRoutes": true
     }
   }
 }
