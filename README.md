@@ -29,8 +29,8 @@ so you're never caught off guard.
 - [x] Skeleton loading states (no spinners)
 - [x] Graceful error handling on all screens
 - [x] Onboarding flow (welcome → location explanation → permission)
-- [ ] Commuter mode (home vs work city weather diff alert)
-- [ ] Daily digest time picker UI
+- [x] Commuter mode (home vs work city weather diff alert)
+- [x] Daily digest time picker UI
 
 ---
 
@@ -125,4 +125,4 @@ constants/
 
 ## Last Updated
 
-2026-03-18 (onboarding added)
+2026-03-18 (commuter mode + daily digest time picker added)

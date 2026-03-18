@@ -18,6 +18,7 @@ import {
   DEFAULT_SETTINGS,
 } from '../services/storage';
 import { NotificationToggle } from '../components/NotificationToggle';
+import { TimePicker } from '../components/TimePicker';
 import { useNotifications } from '../hooks/useNotifications';
 import { scheduleDailyDigest } from '../services/notifications';
 import { useCities } from '../hooks/useCities';
@@ -170,10 +171,18 @@ export default function SettingsScreen() {
           />
           <NotificationToggle
             label="Daily digest"
-            description={`Sent at ${settings.notifications.dailyDigestTime}`}
             value={settings.notifications.dailyDigest}
             onValueChange={v => updateNotif({ dailyDigest: v })}
           />
+          {settings.notifications.dailyDigest && (
+            <View style={styles.timePickerRow}>
+              <Text style={styles.timePickerLabel}>Digest time</Text>
+              <TimePicker
+                value={settings.notifications.dailyDigestTime}
+                onChange={t => updateNotif({ dailyDigestTime: t })}
+              />
+            </View>
+          )}
           <NotificationToggle
             label="1 day before"
             description="Alert the day before severe weather"
@@ -375,6 +384,20 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontFamily: 'DMSans_400Regular',
     lineHeight: 18,
+  },
+  timePickerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderTopWidth: 0.5,
+    borderTopColor: Colors.border,
+  },
+  timePickerLabel: {
+    color: Colors.textSecondary,
+    fontSize: 14,
+    fontFamily: 'DMSans_400Regular',
   },
   footer: {
     color: Colors.textMuted,

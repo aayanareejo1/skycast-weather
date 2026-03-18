@@ -14,6 +14,7 @@ import { Colors } from '../constants/colors';
 import { useWeather } from '../hooks/useWeather';
 import { useLocation } from '../hooks/useLocation';
 import { useCities } from '../hooks/useCities';
+import { useCommuterAlert } from '../hooks/useCommuterAlert';
 import { getSettings } from '../services/storage';
 import { getWeatherCondition, formatTemp } from '../services/weatherApi';
 import { Config } from '../constants/config';
@@ -31,6 +32,7 @@ export default function HomeScreen() {
   const [alertDismissed, setAlertDismissed] = useState(false);
 
   const { coords, permissionStatus, requestPermission } = useLocation();
+  const { alert: commuterAlert } = useCommuterAlert(coords?.latitude ?? null, coords?.longitude ?? null);
 
   // Determine which lat/lon to use
   const selectedCity = cities[selectedCityIndex];
@@ -196,12 +198,17 @@ export default function HomeScreen() {
           onSelect={handleCitySelect}
         />
 
-        {/* Alert banner */}
+        {/* Weather alert banner */}
         {alertMessage && (
           <AlertBanner
             message={alertMessage}
             onDismiss={() => setAlertDismissed(true)}
           />
+        )}
+
+        {/* Commuter alert banner */}
+        {commuterAlert && (
+          <AlertBanner message={`Commuter alert · ${commuterAlert.message}`} />
         )}
 
         {/* Error notice (with stale data) */}

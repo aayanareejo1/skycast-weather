@@ -11,6 +11,8 @@ import {
   Platform,
   ActivityIndicator,
   Alert,
+  Switch,
+  ScrollView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../constants/colors';
@@ -32,7 +34,7 @@ export default function SearchScreen() {
   const [useFahrenheit, setUseFahrenheit] = useState(false);
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const abortRef = useRef<AbortController | null>(null);
-  const { cities, addCity } = useCities();
+  const { cities, addCity, removeCity, updateCity } = useCities();
 
   useEffect(() => {
     getSettings().then(s => setUseFahrenheit(s.useFahrenheit));
@@ -44,7 +46,6 @@ export default function SearchScreen() {
       return;
     }
 
-    // Cancel previous request
     abortRef.current?.abort();
     const controller = new AbortController();
     abortRef.current = controller;
@@ -55,7 +56,6 @@ export default function SearchScreen() {
     try {
       const geocoded = await searchCities(q, controller.signal);
 
-      // Fetch current temp for each result (staggered)
       const withTemps: CityResult[] = [];
       for (let i = 0; i < geocoded.length; i++) {
         if (i > 0) await new Promise(r => setTimeout(r, Config.FETCH_STAGGER_MS));
@@ -74,7 +74,7 @@ export default function SearchScreen() {
       if (!controller.signal.aborted) {
         setResults(withTemps);
       }
-    } catch (err) {
+    } catch {
       if (controller.signal.aborted) return;
       setError('Search failed. Check your connection and try again.');
     } finally {
@@ -86,11 +86,8 @@ export default function SearchScreen() {
 
   const handleQueryChange = useCallback((text: string) => {
     setQuery(text);
-
     if (debounceTimer.current) clearTimeout(debounceTimer.current);
-    debounceTimer.current = setTimeout(() => {
-      performSearch(text);
-    }, Config.SEARCH_DEBOUNCE_MS);
+    debounceTimer.current = setTimeout(() => performSearch(text), Config.SEARCH_DEBOUNCE_MS);
   }, [performSearch]);
 
   useEffect(() => {
@@ -114,19 +111,27 @@ export default function SearchScreen() {
     if (!result.success) {
       Alert.alert('Cannot add city', result.error ?? 'Unknown error');
     } else {
-      setResults(prev =>
-        prev.map(r => r.id === item.id ? { ...r, isSaved: true } : r)
-      );
+      setResults(prev => prev.map(r => r.id === item.id ? { ...r, isSaved: true } : r));
     }
   }, [addCity]);
 
+  const handleRemove = useCallback((id: number) => {
+    Alert.alert('Remove city', 'Remove this city from your saved list?', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Remove', style: 'destructive', onPress: () => removeCity(id) },
+    ]);
+  }, [removeCity]);
+
+  const handleCommuterToggle = useCallback((id: number, value: boolean) => {
+    updateCity(id, { commuterMode: value });
+  }, [updateCity]);
+
   const keyExtractor = useCallback((item: CityResult) => item.id.toString(), []);
 
-  const renderItem = useCallback(({ item }: { item: CityResult }) => {
+  const renderResult = useCallback(({ item }: { item: CityResult }) => {
     const subtitle = [item.admin1, item.country].filter(Boolean).join(', ');
     const tempStr = item.currentTemp !== undefined
-      ? formatTemp(item.currentTemp, useFahrenheit)
-      : '—';
+      ? formatTemp(item.currentTemp, useFahrenheit) : '—';
 
     return (
       <View style={styles.resultItem}>
@@ -151,62 +156,113 @@ export default function SearchScreen() {
     );
   }, [useFahrenheit, handleAdd]);
 
+  const savedNonLocation = cities.filter(c => !c.isCurrentLocation);
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <KeyboardAvoidingView
         style={styles.container}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
-        <Text style={styles.title}>Search Cities</Text>
-
-        <View style={styles.inputWrap}>
-          <Ionicons name="search" size={18} color={Colors.textMuted} style={styles.searchIcon} />
-          <TextInput
-            style={styles.input}
-            value={query}
-            onChangeText={handleQueryChange}
-            placeholder="City name..."
-            placeholderTextColor={Colors.textMuted}
-            returnKeyType="search"
-            autoCorrect={false}
-            autoCapitalize="words"
-          />
-          {isSearching && (
-            <ActivityIndicator size="small" color={Colors.accentBlue} style={styles.spinner} />
-          )}
-          {query.length > 0 && !isSearching && (
-            <TouchableOpacity onPress={() => { setQuery(''); setResults([]); }}>
-              <Ionicons name="close-circle" size={18} color={Colors.textMuted} />
-            </TouchableOpacity>
-          )}
-        </View>
-
-        <Text style={styles.hint}>
-          You can save up to {Config.MAX_CITIES} cities
-        </Text>
-
-        {error && (
-          <View style={styles.errorBox}>
-            <Ionicons name="alert-circle" size={16} color={Colors.alertAmber} />
-            <Text style={styles.errorText}>{error}</Text>
-          </View>
-        )}
-
-        <FlatList
-          data={results}
-          keyExtractor={keyExtractor}
-          renderItem={renderItem}
+        <ScrollView
           keyboardShouldPersistTaps="handled"
-          contentContainerStyle={styles.listContent}
-          ListEmptyComponent={
-            !isSearching && query.length > 0 ? (
-              <View style={styles.emptyState}>
-                <Ionicons name="location-outline" size={40} color={Colors.textMuted} />
-                <Text style={styles.emptyText}>No cities found</Text>
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.scrollContent}
+        >
+          <Text style={styles.title}>Cities</Text>
+
+          {/* Saved cities section */}
+          {savedNonLocation.length > 0 && (
+            <View style={styles.section}>
+              <Text style={styles.sectionLabel}>SAVED CITIES</Text>
+              <View style={styles.card}>
+                {savedNonLocation.map((city, i) => (
+                  <View key={city.id}>
+                    <View style={styles.savedRow}>
+                      <View style={styles.savedInfo}>
+                        <Text style={styles.savedName}>{city.name}</Text>
+                        <Text style={styles.savedSubtitle}>{city.country}</Text>
+                      </View>
+                      <View style={styles.savedActions}>
+                        <View style={styles.commuterWrap}>
+                          <Ionicons name="train" size={13} color={Colors.textMuted} />
+                          <Text style={styles.commuterLabel}>Commuter</Text>
+                          <Switch
+                            value={city.commuterMode ?? false}
+                            onValueChange={v => handleCommuterToggle(city.id, v)}
+                            trackColor={{ false: Colors.surface, true: Colors.accentBlue }}
+                            thumbColor={Colors.textPrimary}
+                            style={styles.commuterSwitch}
+                          />
+                        </View>
+                        <TouchableOpacity
+                          onPress={() => handleRemove(city.id)}
+                          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                        >
+                          <Ionicons name="trash-outline" size={18} color={Colors.textMuted} />
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                    {i < savedNonLocation.length - 1 && <View style={styles.separator} />}
+                  </View>
+                ))}
               </View>
-            ) : null
-          }
-        />
+              {savedNonLocation.some(c => c.commuterMode) && (
+                <Text style={styles.commuterHint}>
+                  Commuter mode alerts you when weather differs between home and that city
+                </Text>
+              )}
+            </View>
+          )}
+
+          {/* Search input */}
+          <View style={styles.section}>
+            <Text style={styles.sectionLabel}>ADD A CITY</Text>
+            <View style={styles.inputWrap}>
+              <Ionicons name="search" size={18} color={Colors.textMuted} style={styles.searchIcon} />
+              <TextInput
+                style={styles.input}
+                value={query}
+                onChangeText={handleQueryChange}
+                placeholder="Search city name..."
+                placeholderTextColor={Colors.textMuted}
+                returnKeyType="search"
+                autoCorrect={false}
+                autoCapitalize="words"
+              />
+              {isSearching && (
+                <ActivityIndicator size="small" color={Colors.accentBlue} style={styles.spinner} />
+              )}
+              {query.length > 0 && !isSearching && (
+                <TouchableOpacity onPress={() => { setQuery(''); setResults([]); }}>
+                  <Ionicons name="close-circle" size={18} color={Colors.textMuted} />
+                </TouchableOpacity>
+              )}
+            </View>
+            <Text style={styles.hint}>Up to {Config.MAX_CITIES} cities</Text>
+          </View>
+
+          {error && (
+            <View style={styles.errorBox}>
+              <Ionicons name="alert-circle" size={16} color={Colors.alertAmber} />
+              <Text style={styles.errorText}>{error}</Text>
+            </View>
+          )}
+
+          {/* Search results */}
+          {results.map((item) => (
+            <React.Fragment key={item.id}>
+              {renderResult({ item })}
+            </React.Fragment>
+          ))}
+
+          {!isSearching && query.length > 0 && results.length === 0 && (
+            <View style={styles.emptyState}>
+              <Ionicons name="location-outline" size={40} color={Colors.textMuted} />
+              <Text style={styles.emptyText}>No cities found</Text>
+            </View>
+          )}
+        </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -219,14 +275,84 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
+  },
+  scrollContent: {
     paddingHorizontal: 16,
+    paddingBottom: 40,
   },
   title: {
     color: Colors.textPrimary,
     fontSize: 28,
     fontFamily: 'DMSans_500Medium',
     marginTop: 16,
-    marginBottom: 16,
+    marginBottom: 20,
+  },
+  section: {
+    marginBottom: 20,
+  },
+  sectionLabel: {
+    color: Colors.textMuted,
+    fontSize: 10,
+    fontFamily: 'DMSans_500Medium',
+    letterSpacing: 0.08 * 10,
+    marginBottom: 8,
+  },
+  card: {
+    backgroundColor: Colors.surface,
+    borderRadius: 12,
+    borderWidth: 0.5,
+    borderColor: Colors.border,
+    overflow: 'hidden',
+  },
+  savedRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  savedInfo: {
+    flex: 1,
+  },
+  savedName: {
+    color: Colors.textPrimary,
+    fontSize: 15,
+    fontFamily: 'DMSans_500Medium',
+  },
+  savedSubtitle: {
+    color: Colors.textMuted,
+    fontSize: 12,
+    fontFamily: 'DMSans_400Regular',
+    marginTop: 2,
+  },
+  savedActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  commuterWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  commuterLabel: {
+    color: Colors.textMuted,
+    fontSize: 12,
+    fontFamily: 'DMSans_400Regular',
+  },
+  commuterSwitch: {
+    transform: [{ scaleX: 0.8 }, { scaleY: 0.8 }],
+  },
+  commuterHint: {
+    color: Colors.textMuted,
+    fontSize: 12,
+    fontFamily: 'DMSans_400Regular',
+    marginTop: 6,
+    lineHeight: 17,
+  },
+  separator: {
+    height: 0.5,
+    backgroundColor: Colors.border,
+    marginHorizontal: 14,
   },
   inputWrap: {
     flexDirection: 'row',
@@ -237,7 +363,6 @@ const styles = StyleSheet.create({
     borderColor: Colors.border,
     paddingHorizontal: 14,
     height: 50,
-    marginBottom: 8,
   },
   searchIcon: {
     marginRight: 10,
@@ -256,7 +381,7 @@ const styles = StyleSheet.create({
     color: Colors.textMuted,
     fontSize: 12,
     fontFamily: 'DMSans_400Regular',
-    marginBottom: 16,
+    marginTop: 6,
   },
   errorBox: {
     flexDirection: 'row',
@@ -272,9 +397,6 @@ const styles = StyleSheet.create({
     color: Colors.alertAmber,
     fontSize: 13,
     fontFamily: 'DMSans_400Regular',
-  },
-  listContent: {
-    paddingBottom: 40,
   },
   resultItem: {
     flexDirection: 'row',
@@ -319,7 +441,7 @@ const styles = StyleSheet.create({
   },
   emptyState: {
     alignItems: 'center',
-    paddingTop: 60,
+    paddingTop: 40,
     gap: 12,
   },
   emptyText: {
