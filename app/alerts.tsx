@@ -14,6 +14,71 @@ import { fetchWeather, getWeatherCondition, WeatherData } from '../services/weat
 import { getSettings } from '../services/storage';
 import { Config } from '../constants/config';
 
+const SEVERITY_ORDER: Record<AlertItem['severity'], number> = { severe: 0, moderate: 1, light: 2 };
+const MAX_ALERTS_PER_CITY = 3;
+
+function buildCityAlerts(
+  data: WeatherData,
+  city: { id: number; name: string },
+  settings: { rainSensitivity: number }
+): AlertItem[] {
+  const now = new Date();
+  const cutoff = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+  const results: AlertItem[] = [];
+  let i = 0;
+
+  while (i < data.hourly.time.length && results.length < MAX_ALERTS_PER_CITY) {
+    const t = new Date(data.hourly.time[i]);
+    if (t <= now || t > cutoff) { i++; continue; }
+
+    const prob = data.hourly.precipitationProbability[i];
+    const code = data.hourly.weatherCode[i];
+    const condition = getWeatherCondition(code);
+
+    if (prob < settings.rainSensitivity && condition.severity === 'none') { i++; continue; }
+
+    // Group consecutive hours with same condition label
+    const startTime = t;
+    let endTime = t;
+    let maxProb = prob;
+    let j = i + 1;
+    while (j < data.hourly.time.length) {
+      const nt = new Date(data.hourly.time[j]);
+      if (nt > cutoff) break;
+      const nc = getWeatherCondition(data.hourly.weatherCode[j]);
+      const np = data.hourly.precipitationProbability[j];
+      if (nc.label !== condition.label) break;
+      endTime = nt;
+      if (np > maxProb) maxProb = np;
+      j++;
+    }
+
+    const fmt = (d: Date) => d.toLocaleTimeString([], { hour: 'numeric', hour12: true });
+    const minsUntil = Math.round((startTime.getTime() - now.getTime()) / 60000);
+    const hoursUntil = Math.floor(minsUntil / 60);
+    const timePrefix = hoursUntil > 0 ? `In ${hoursUntil}h` : `In ${minsUntil}m`;
+    const duration = endTime > startTime
+      ? ` · ${fmt(startTime)}–${fmt(endTime)}`
+      : ` · ${fmt(startTime)}`;
+
+    results.push({
+      id: `${city.id}-${i}`,
+      cityName: city.name,
+      condition: condition.label,
+      icon: condition.icon,
+      timeLabel: `${timePrefix}${duration}`,
+      probability: maxProb,
+      severity: condition.severity === 'none'
+        ? maxProb < 40 ? 'light' : maxProb < 70 ? 'moderate' : 'severe'
+        : condition.severity,
+    });
+
+    i = j; // skip to after this event
+  }
+
+  return results;
+}
+
 interface AlertItem {
   id: string;
   cityName: string;
@@ -77,48 +142,14 @@ export default function AlertsScreen() {
         const city = cities[i];
         try {
           const data = await fetchWeather(city.latitude, city.longitude);
-          const now = new Date();
-          const cutoff = new Date(now.getTime() + 24 * 60 * 60 * 1000);
-
-          for (let j = 0; j < data.hourly.time.length; j++) {
-            const t = new Date(data.hourly.time[j]);
-            if (t <= now || t > cutoff) continue;
-
-            const prob = data.hourly.precipitationProbability[j];
-            const code = data.hourly.weatherCode[j];
-            const condition = getWeatherCondition(code);
-
-            if (prob >= settings.rainSensitivity || condition.severity !== 'none') {
-              const timeStr = t.toLocaleTimeString([], {
-                hour: '2-digit',
-                minute: '2-digit',
-                hour12: true,
-              });
-              const minsUntil = Math.round((t.getTime() - now.getTime()) / 60000);
-              const hoursUntil = Math.floor(minsUntil / 60);
-              const timeLabel = hoursUntil > 0
-                ? `In ${hoursUntil}h ${minsUntil % 60}m · ${timeStr}`
-                : `In ${minsUntil}m · ${timeStr}`;
-
-              allAlerts.push({
-                id: `${city.id}-${j}`,
-                cityName: city.name,
-                condition: condition.label,
-                icon: condition.icon,
-                timeLabel,
-                probability: prob,
-                severity: condition.severity === 'none'
-                  ? prob < 40 ? 'light' : prob < 70 ? 'moderate' : 'severe'
-                  : condition.severity,
-              });
-              break; // one alert per city
-            }
-          }
+          const cityAlerts = buildCityAlerts(data, city, settings);
+          allAlerts.push(...cityAlerts);
         } catch {
           // Skip this city if fetch fails
         }
       }
 
+      allAlerts.sort((a, b) => SEVERITY_ORDER[a.severity] - SEVERITY_ORDER[b.severity]);
       setAlerts(allAlerts);
     } catch {
       // Settings fetch failed — use defaults

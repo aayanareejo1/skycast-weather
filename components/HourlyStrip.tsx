@@ -15,12 +15,25 @@ interface HourlyItem {
 interface Props {
   items: HourlyItem[];
   useFahrenheit: boolean;
+  timezone?: string;
 }
 
-export function HourlyStrip({ items, useFahrenheit }: Props) {
+function formatTimezone(tz: string): string {
+  // "America/New_York" → "New York time", "Europe/London" → "London time"
+  const city = tz.split('/').pop()?.replace(/_/g, ' ') ?? tz;
+  return `${city} time`;
+}
+
+export function HourlyStrip({ items, useFahrenheit, timezone }: Props) {
+  const localTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const showTZ = timezone && timezone !== localTimezone;
+
   return (
     <View style={styles.wrapper}>
-      <Text style={styles.label}>HOURLY</Text>
+      <View style={styles.labelRow}>
+        <Text style={styles.label}>HOURLY</Text>
+        {showTZ && <Text style={styles.tzLabel}>{formatTimezone(timezone!)}</Text>}
+      </View>
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -59,13 +72,24 @@ const styles = StyleSheet.create({
   wrapper: {
     marginBottom: 8,
   },
+  labelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginLeft: 16,
+    marginRight: 16,
+    marginBottom: 8,
+  },
   label: {
     color: Colors.textMuted,
     fontSize: 10,
     fontFamily: 'DMSans_500Medium',
     letterSpacing: 0.08 * 10,
-    marginLeft: 16,
-    marginBottom: 8,
+  },
+  tzLabel: {
+    color: Colors.textMuted,
+    fontSize: 11,
+    fontFamily: 'DMSans_400Regular',
   },
   scrollContent: {
     paddingHorizontal: 16,

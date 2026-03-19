@@ -15,6 +15,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
 import { Colors } from '../constants/colors';
 import { searchCities, fetchWeather, formatTemp, GeocodingResult } from '../services/weatherApi';
 import { useCities } from '../hooks/useCities';
@@ -34,7 +35,8 @@ export default function SearchScreen() {
   const [useFahrenheit, setUseFahrenheit] = useState(false);
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const abortRef = useRef<AbortController | null>(null);
-  const { cities, addCity, removeCity, updateCity } = useCities();
+  const { cities, addCity, removeCity, updateCity, reorderCities } = useCities();
+  const savedNonLocation = cities.filter(c => !c.isCurrentLocation);
 
   useEffect(() => {
     getSettings().then(s => setUseFahrenheit(s.useFahrenheit));
@@ -98,6 +100,7 @@ export default function SearchScreen() {
   }, []);
 
   const handleAdd = useCallback(async (item: CityResult) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     const result = await addCity({
       id: item.id,
       name: item.name,
@@ -116,15 +119,35 @@ export default function SearchScreen() {
   }, [addCity]);
 
   const handleRemove = useCallback((id: number) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     Alert.alert('Remove city', 'Remove this city from your saved list?', [
       { text: 'Cancel', style: 'cancel' },
-      { text: 'Remove', style: 'destructive', onPress: () => removeCity(id) },
+      { text: 'Remove', style: 'destructive', onPress: () => {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+        removeCity(id);
+      }},
     ]);
   }, [removeCity]);
 
   const handleCommuterToggle = useCallback((id: number, value: boolean) => {
     updateCity(id, { commuterMode: value });
   }, [updateCity]);
+
+  const handleMoveUp = useCallback((index: number) => {
+    if (index === 0) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    const reordered = [...savedNonLocation];
+    [reordered[index - 1], reordered[index]] = [reordered[index], reordered[index - 1]];
+    reorderCities(reordered);
+  }, [savedNonLocation, reorderCities]);
+
+  const handleMoveDown = useCallback((index: number) => {
+    if (index === savedNonLocation.length - 1) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    const reordered = [...savedNonLocation];
+    [reordered[index], reordered[index + 1]] = [reordered[index + 1], reordered[index]];
+    reorderCities(reordered);
+  }, [savedNonLocation, reorderCities]);
 
   const keyExtractor = useCallback((item: CityResult) => item.id.toString(), []);
 
@@ -156,8 +179,6 @@ export default function SearchScreen() {
     );
   }, [useFahrenheit, handleAdd]);
 
-  const savedNonLocation = cities.filter(c => !c.isCurrentLocation);
-
   return (
     <SafeAreaView style={styles.safeArea}>
       <KeyboardAvoidingView
@@ -184,6 +205,22 @@ export default function SearchScreen() {
                         <Text style={styles.savedSubtitle}>{city.country}</Text>
                       </View>
                       <View style={styles.savedActions}>
+                        <View style={styles.reorderBtns}>
+                          <TouchableOpacity
+                            onPress={() => handleMoveUp(i)}
+                            disabled={i === 0}
+                            hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                          >
+                            <Ionicons name="chevron-up" size={16} color={i === 0 ? Colors.textMuted + '44' : Colors.textMuted} />
+                          </TouchableOpacity>
+                          <TouchableOpacity
+                            onPress={() => handleMoveDown(i)}
+                            disabled={i === savedNonLocation.length - 1}
+                            hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                          >
+                            <Ionicons name="chevron-down" size={16} color={i === savedNonLocation.length - 1 ? Colors.textMuted + '44' : Colors.textMuted} />
+                          </TouchableOpacity>
+                        </View>
                         <View style={styles.commuterWrap}>
                           <Ionicons name="train" size={13} color={Colors.textMuted} />
                           <Text style={styles.commuterLabel}>Commuter</Text>
@@ -328,6 +365,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
+  },
+  reorderBtns: {
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: 2,
   },
   commuterWrap: {
     flexDirection: 'row',

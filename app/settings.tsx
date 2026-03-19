@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import Slider from '@react-native-community/slider';
 import { Ionicons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
 import { Colors } from '../constants/colors';
 import {
   getSettings,
@@ -24,6 +25,13 @@ import { scheduleDailyDigest } from '../services/notifications';
 import { useCities } from '../hooks/useCities';
 
 type ActivityProfile = AppSettings['activityProfile'];
+
+function formatHour(h: number): string {
+  if (h === 0) return '12 AM';
+  if (h < 12) return `${h} AM`;
+  if (h === 12) return '12 PM';
+  return `${h - 12} PM`;
+}
 
 const ACTIVITY_PROFILES: { key: ActivityProfile; label: string; icon: string }[] = [
   { key: 'commuter',  label: 'Commuter',  icon: 'train'         },
@@ -95,13 +103,13 @@ export default function SettingsScreen() {
             <View style={styles.unitToggle}>
               <TouchableOpacity
                 style={[styles.unitBtn, !settings.useFahrenheit && styles.unitBtnActive]}
-                onPress={() => update({ useFahrenheit: false })}
+                onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); update({ useFahrenheit: false }); }}
               >
                 <Text style={[styles.unitBtnText, !settings.useFahrenheit && styles.unitBtnTextActive]}>°C</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.unitBtn, settings.useFahrenheit && styles.unitBtnActive]}
-                onPress={() => update({ useFahrenheit: true })}
+                onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); update({ useFahrenheit: true }); }}
               >
                 <Text style={[styles.unitBtnText, settings.useFahrenheit && styles.unitBtnTextActive]}>°F</Text>
               </TouchableOpacity>
@@ -119,7 +127,7 @@ export default function SettingsScreen() {
                 <TouchableOpacity
                   key={profile.key}
                   style={[styles.chip, isActive && styles.chipActive]}
-                  onPress={() => update({ activityProfile: profile.key })}
+                  onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); update({ activityProfile: profile.key }); }}
                   activeOpacity={0.7}
                 >
                   <Ionicons
@@ -219,7 +227,7 @@ export default function SettingsScreen() {
             </Text>
           </View>
           <Text style={styles.dndHint}>
-            Currently: {settings.dndStart}pm to {settings.dndEnd}am (quiet hours)
+            Quiet hours: {formatHour(settings.dndStart)} – {formatHour(settings.dndEnd)}
           </Text>
         </View>
 

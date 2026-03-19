@@ -17,7 +17,13 @@
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "SkyCast uses your location to show local weather and send timely alerts.",
         "NSLocationAlwaysAndWhenInUseUsageDescription": "SkyCast uses your location in the background to monitor weather changes and send alerts.",
-        "UIBackgroundModes": ["fetch", "remote-notification"]
+        "UIBackgroundModes": [
+          "fetch",
+          "remote-notification",
+          "fetch",
+          "remote-notification"
+        ],
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
@@ -32,7 +38,12 @@
         "ACCESS_BACKGROUND_LOCATION",
         "RECEIVE_BOOT_COMPLETED",
         "VIBRATE",
-        "POST_NOTIFICATIONS"
+        "POST_NOTIFICATIONS",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_BACKGROUND_LOCATION",
+        "android.permission.FOREGROUND_SERVICE",
+        "android.permission.FOREGROUND_SERVICE_LOCATION"
       ]
     },
     "web": {
@@ -61,6 +72,13 @@
     "scheme": "skycast",
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "5bc04ea5-8392-45b3-9c99-679d5ddc43bd"
+      }
+    },
+    "owner": "aareejo"
   }
 }

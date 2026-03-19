@@ -1,5 +1,6 @@
 import React, { useCallback } from 'react';
 import { ScrollView, TouchableOpacity, Text, StyleSheet, View } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import { SavedCity } from '../services/storage';
 import { Colors } from '../constants/colors';
 
@@ -11,7 +12,10 @@ interface Props {
 
 export function CityTabs({ cities, selectedIndex, onSelect }: Props) {
   const handlePress = useCallback(
-    (index: number) => () => onSelect(index),
+    (index: number) => () => {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      onSelect(index);
+    },
     [onSelect]
   );
 

@@ -7,7 +7,11 @@ interface Props {
 }
 
 export function RainBars({ items }: Props) {
-  const maxProb = Math.max(...items.map(i => i.probability), 1);
+  let maxProb = 0;
+  for (const item of items) {
+    if (item.probability > maxProb) maxProb = item.probability;
+  }
+  if (maxProb === 0) maxProb = 1; // avoid division by zero when all bars are 0%
 
   return (
     <View style={styles.wrapper}>

@@ -9,6 +9,8 @@ export interface CommuterAlert {
   severity: 'light' | 'moderate' | 'severe';
 }
 
+const SEVERITY_RANK: Record<string, number> = { none: 0, light: 1, moderate: 2, severe: 3 };
+
 function getNextHoursCondition(data: WeatherData, hours: number = 4) {
   const now = new Date();
   const cutoff = new Date(now.getTime() + hours * 60 * 60 * 1000);
@@ -23,8 +25,7 @@ function getNextHoursCondition(data: WeatherData, hours: number = 4) {
     }
     const cond = getWeatherCondition(data.hourly.weatherCode[i]);
     const curr = getWeatherCondition(worstCode);
-    const severityRank = { none: 0, light: 1, moderate: 2, severe: 3 };
-    if (severityRank[cond.severity] > severityRank[curr.severity]) {
+    if (SEVERITY_RANK[cond.severity] > SEVERITY_RANK[curr.severity]) {
       worstCode = data.hourly.weatherCode[i];
     }
   }
@@ -51,9 +52,7 @@ export function useCommuterAlert(
         const commuterCities = cities.filter(c => c.commuterMode && !c.isCurrentLocation);
         if (commuterCities.length === 0) return;
 
-        const [homeData] = await Promise.all([
-          fetchWeather(homeLat!, homeLon!),
-        ]);
+        const homeData = await fetchWeather(homeLat!, homeLon!);
         const homeCondition = getNextHoursCondition(homeData);
 
         for (let i = 0; i < commuterCities.length; i++) {

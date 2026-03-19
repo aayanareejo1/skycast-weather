@@ -8,8 +8,9 @@ import {
   TouchableOpacity,
   SafeAreaView,
 } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { Colors } from '../constants/colors';
 import { useWeather } from '../hooks/useWeather';
 import { useLocation } from '../hooks/useLocation';
@@ -19,6 +20,7 @@ import { getSettings } from '../services/storage';
 import { getWeatherCondition, formatTemp } from '../services/weatherApi';
 import { Config } from '../constants/config';
 import { AlertBanner } from '../components/AlertBanner';
+import { useNetworkStatus } from '../hooks/useNetworkStatus';
 import { HourlyStrip } from '../components/HourlyStrip';
 import { RainBars } from '../components/RainBars';
 import { WeekForecast } from '../components/WeekForecast';
@@ -27,29 +29,42 @@ import { HomeScreenSkeleton } from '../components/SkeletonLoader';
 
 export default function HomeScreen() {
   const { cities, isLoading: citiesLoading } = useCities();
-  const [selectedCityIndex, setSelectedCityIndex] = useState(0);
+  // Track by ID so reordering cities in Search doesn't break the active tab
+  const [selectedCityId, setSelectedCityId] = useState<number | null>(null);
   const [useFahrenheit, setUseFahrenheit] = useState(false);
+  const [rainSensitivity, setRainSensitivity] = useState<number>(Config.RAIN_SENSITIVITY_DEFAULT);
   const [alertDismissed, setAlertDismissed] = useState(false);
 
+  // Sync settings whenever screen comes into focus (e.g. after changing in Settings)
+  useFocusEffect(useCallback(() => {
+    getSettings().then(s => {
+      setUseFahrenheit(s.useFahrenheit);
+      setRainSensitivity(s.rainSensitivity);
+    });
+  }, []));
+
+  const isOnline = useNetworkStatus();
   const { coords, permissionStatus, requestPermission } = useLocation();
   const { alert: commuterAlert } = useCommuterAlert(coords?.latitude ?? null, coords?.longitude ?? null);
 
-  // Determine which lat/lon to use
-  const selectedCity = cities[selectedCityIndex];
+  // Resolve selected city by ID; fall back to first city if ID not found (deleted/reordered)
+  const selectedCity = cities.find(c => c.id === selectedCityId) ?? cities[0];
+  const safeIndex = cities.indexOf(selectedCity);
   const lat = selectedCity?.latitude ?? coords?.latitude ?? null;
   const lon = selectedCity?.longitude ?? coords?.longitude ?? null;
 
   const { data, isLoading, error, lastUpdated, refresh } = useWeather(lat, lon);
 
   const handleRefresh = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     refresh();
     setAlertDismissed(false);
   }, [refresh]);
 
   const handleCitySelect = useCallback((index: number) => {
-    setSelectedCityIndex(index);
+    setSelectedCityId(cities[index]?.id ?? null);
     setAlertDismissed(false);
-  }, []);
+  }, [cities]);
 
   // Detect weather alert in next 24h
   const alertMessage = useMemo(() => {
@@ -65,13 +80,13 @@ export default function HomeScreen() {
       const code = data.hourly.weatherCode[i];
       const condition = getWeatherCondition(code);
 
-      if (prob >= 40 || condition.severity !== 'none') {
+      if (prob >= rainSensitivity || condition.severity !== 'none') {
         const timeStr = t.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         return `${condition.label} expected at ${timeStr} · ${prob}% chance`;
       }
     }
     return null;
-  }, [data, alertDismissed]);
+  }, [data, alertDismissed, rainSensitivity]);
 
   // Next 8 hourly items from now
   const hourlyItems = useMemo(() => {
@@ -114,6 +129,7 @@ export default function HomeScreen() {
     if (!lastUpdated) return null;
     const mins = Math.floor((Date.now() - lastUpdated) / 60000);
     if (mins < 1) return 'Just updated';
+    if (mins >= 120) return `Data from ${Math.floor(mins / 60)}h ago — may be outdated`;
     return `Updated ${mins}m ago`;
   }, [lastUpdated]);
 
@@ -194,9 +210,14 @@ export default function HomeScreen() {
         {/* City tabs */}
         <CityTabs
           cities={cities}
-          selectedIndex={selectedCityIndex}
+          selectedIndex={safeIndex}
           onSelect={handleCitySelect}
         />
+
+        {/* Offline banner */}
+        {!isOnline && (
+          <AlertBanner message="No internet connection — showing last known data" />
+        )}
 
         {/* Weather alert banner */}
         {alertMessage && (
@@ -256,7 +277,7 @@ export default function HomeScreen() {
               )}
             </View>
 
-            <HourlyStrip items={hourlyItems} useFahrenheit={useFahrenheit} />
+            <HourlyStrip items={hourlyItems} useFahrenheit={useFahrenheit} timezone={data.timezone} />
             <RainBars items={rainItems} />
             <WeekForecast days={dailyItems} useFahrenheit={useFahrenheit} />
           </>

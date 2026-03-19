@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
 import * as Location from 'expo-location';
 import { Colors } from '../constants/colors';
 import { setOnboarded } from '../services/storage';
@@ -26,27 +27,28 @@ export default function OnboardingScreen() {
   const [stepIndex, setStepIndex] = useState(0);
   const [locationGranted, setLocationGranted] = useState(false);
   const slideAnim = useRef(new Animated.Value(0)).current;
+  const dotAnims = useRef(STEPS.map((_, i) => new Animated.Value(i === 0 ? 1 : 0))).current;
 
   const currentStep = STEPS[stepIndex];
 
   function animateToNext(nextIndex: number) {
+    // Animate dots
+    Animated.parallel([
+      Animated.timing(dotAnims[stepIndex], { toValue: 0, duration: 200, useNativeDriver: false }),
+      Animated.timing(dotAnims[nextIndex], { toValue: 1, duration: 200, useNativeDriver: false }),
+    ]).start();
+
+    // Slide content
     Animated.sequence([
-      Animated.timing(slideAnim, {
-        toValue: -40,
-        duration: 180,
-        useNativeDriver: true,
-      }),
-      Animated.timing(slideAnim, {
-        toValue: 0,
-        duration: 0,
-        useNativeDriver: true,
-      }),
+      Animated.timing(slideAnim, { toValue: -40, duration: 180, useNativeDriver: true }),
+      Animated.timing(slideAnim, { toValue: 0, duration: 0, useNativeDriver: true }),
     ]).start();
 
     setTimeout(() => setStepIndex(nextIndex), 100);
   }
 
   async function handleLocationAllow() {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
       const granted = status === 'granted';
@@ -58,11 +60,13 @@ export default function OnboardingScreen() {
   }
 
   function handleLocationSkip() {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setLocationGranted(false);
     animateToNext(stepIndex + 1);
   }
 
   async function handleNotificationsAllow() {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     try {
       const granted = await requestNotificationPermission();
       if (granted) await registerBackgroundTask();
@@ -73,6 +77,7 @@ export default function OnboardingScreen() {
   }
 
   async function handleNotificationsSkip() {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     await finish();
   }
 
@@ -91,9 +96,18 @@ export default function OnboardingScreen() {
         {/* Step dots */}
         <View style={styles.dots}>
           {STEPS.map((_, i) => (
-            <View
+            <Animated.View
               key={i}
-              style={[styles.dot, i === stepIndex && styles.dotActive]}
+              style={[
+                styles.dot,
+                {
+                  width: dotAnims[i].interpolate({ inputRange: [0, 1], outputRange: [6, 20] }),
+                  backgroundColor: dotAnims[i].interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [Colors.border, Colors.accentBlue],
+                  }),
+                },
+              ]}
             />
           ))}
         </View>
@@ -110,7 +124,7 @@ export default function OnboardingScreen() {
           {currentStep === 'welcome' && (
             <TouchableOpacity
               style={styles.primaryBtn}
-              onPress={() => animateToNext(1)}
+              onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); animateToNext(1); }}
               activeOpacity={0.85}
             >
               <Text style={styles.primaryBtnText}>Get Started</Text>
@@ -232,14 +246,8 @@ const styles = StyleSheet.create({
     marginBottom: 40,
   },
   dot: {
-    width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: Colors.border,
-  },
-  dotActive: {
-    width: 20,
-    backgroundColor: Colors.accentBlue,
   },
   content: {
     flex: 1,
