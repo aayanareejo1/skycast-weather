@@ -1,103 +1,87 @@
-# SkyCast — Weather That Warns You First
+<h1 align="center">SkyCast</h1>
 
-Built for commuters. One afternoon I got completely soaked walking home because it had been clear all morning — the standard weather app showed no rain, but it started pouring mid-commute. So I built SkyCast: a background alert system that checks the weather at both your home and destination, and notifies you before you leave if conditions are about to change.
+<p align="center">
+  <strong>Background weather alerts for commuters. Know before you go.</strong>
+</p>
 
-Cross-platform mobile app (iOS + Android) built with Expo and TypeScript.
+<p align="center">
+  <img src="https://img.shields.io/badge/Expo-55-000020?style=flat-square&logo=expo" />
+  <img src="https://img.shields.io/badge/TypeScript-5-3178C6?style=flat-square&logo=typescript&logoColor=white" />
+  <img src="https://img.shields.io/badge/Open--Meteo-Free_API-00B4D8?style=flat-square" />
+  <img src="https://img.shields.io/badge/Platform-iOS_%7C_Android-lightgrey?style=flat-square" />
+</p>
 
----
+SkyCast runs in the background, checks the weather at your home and destination every 15 minutes, and notifies you before conditions change — before you leave, not after you're already soaked.
 
-## What makes it different
+Built after I got caught in unexpected rain on the way home from campus. Every app I had showed the weather at one place. None of them warned me about what I was walking into.
 
-Most weather apps are passive — you open them to check. SkyCast is **notification-first**: it runs a background task every 15 minutes, compares conditions at your saved cities, and pushes an alert if something's changing before it happens.
+## Features
 
-**Commuter mode** is the core feature. Add your home city and your campus or office, toggle commuter mode on the city, and SkyCast will alert you when the weather is meaningfully different between the two — rain at your destination, temperature drop on the way back, that kind of thing. Built specifically with the daily campus-to-home commute in mind.
-
-Other alerts include:
-- Rain probability crossing your custom sensitivity threshold
-- UV index warnings
-- Temperature extremes
-- Daily digest at a time you set
-
----
+- **Commuter mode** — Add a home city and a destination. SkyCast compares both and alerts you when there's a meaningful difference — rain at your destination, a temperature drop on the way back.
+- **Smart alerts** — Rain probability, UV index, temperature extremes. Set your own sensitivity threshold so you only get notified when it actually matters.
+- **Hourly and 7-day forecasts** — Scrollable hourly strip with a rain probability bar chart and a full week view.
+- **Daily digest** — A morning summary delivered at a time you choose.
+- **Multi-city support** — Add, remove, and switch between saved cities. Each city has its own commuter toggle.
+- **Offline support** — Cached data with a stale-data warning if you haven't synced in over 2 hours.
+- **Dark theme** — Designed to be readable in any lighting.
 
 ## Tech stack
 
-| | |
+| Layer | Technology |
 |---|---|
-| Framework | Expo SDK 55 (managed workflow) + TypeScript |
-| Navigation | Expo Router (file-based, tab layout) |
-| Weather API | Open-Meteo — free, no API key required |
-| Location | `expo-location` |
+| Framework | Expo SDK 55 + TypeScript |
+| Navigation | Expo Router (file-based) |
+| Weather data | Open-Meteo — free, no API key required |
 | Background tasks | `expo-background-fetch` + `expo-task-manager` |
 | Notifications | `expo-notifications` |
 | Storage | `@react-native-async-storage/async-storage` |
-| Fonts | DM Sans via `@expo-google-fonts/dm-sans` |
 
-No `.env` file needed. All weather data comes from [Open-Meteo](https://open-meteo.com), which is completely free and requires no sign-up.
+No `.env` file needed. All weather data comes from [Open-Meteo](https://open-meteo.com).
 
----
-
-## How to run locally
+## Getting started
 
 ### Prerequisites
+
 - Node.js 18+
 - Expo Go on your phone, or an iOS Simulator / Android Emulator
 
-> Note: background fetch and notifications require a **dev build** (`npx expo run:android` or `npx expo run:ios`). They are silently unavailable in Expo Go.
+> Background fetch and push notifications require a **dev build**. They are silently unavailable in Expo Go.
+
+### 1. Clone and install
 
 ```bash
+git clone https://github.com/aayanareejo1/skycast-weather.git
+cd skycast-weather
 npm install
+```
+
+### 2. Run
+
+```bash
 npx expo start
 ```
 
-Then press `a` for Android, `i` for iOS (Mac only), or scan the QR with Expo Go.
+Press `a` for Android Emulator, `i` for iOS Simulator, or scan the QR code with Expo Go.
 
 ```bash
 npx tsc --noEmit   # TypeScript check
 ```
 
----
-
-## Folder structure
+## Project structure
 
 ```
 app/
-  _layout.tsx       # Root layout: fonts, tab bar, notification channel setup
-  index.tsx         # Home screen: temp, hourly, rain bars, 7-day, alert banner
-  search.tsx        # City search + saved cities (commuter toggle, reorder)
-  alerts.tsx        # 24h alert list, grouped by weather event + severity
+  index.tsx         # Home screen — temp, hourly, rain bars, 7-day, alert banner
+  search.tsx        # City search + saved cities with commuter toggle
+  alerts.tsx        # 24h alert list grouped by weather event and severity
   settings.tsx      # Units, activity profile, rain sensitivity, notification toggles
-  onboarding.tsx    # First-launch 3-step flow
+  onboarding.tsx    # First-launch flow
 
-components/
-  AlertBanner.tsx        # Amber warning banner (weather, offline, stale data)
-  CityTabs.tsx           # Horizontal city switcher with haptic feedback
-  HourlyStrip.tsx        # Scrollable hourly forecast with timezone label
-  RainBars.tsx           # Rain probability bar chart by hour
-  WeekForecast.tsx       # 7-day FlatList
-  SkeletonLoader.tsx     # Animated opacity skeleton (no spinners)
-  NotificationToggle.tsx # Labeled switch row for settings
-  TimePicker.tsx         # Native time picker (iOS modal / Android dialog)
-
-hooks/
-  useWeather.ts          # Fetch + cache + AbortController + stale-while-revalidate
-  useLocation.ts         # Permission flow + AppState listener
-  useCities.ts           # AsyncStorage city management (add/remove/update/reorder)
-  useNotifications.ts    # Permission + background task registration
-  useCommuterAlert.ts    # Compares home vs commuter city next-4h forecast
-  useNetworkStatus.ts    # NetInfo online/offline boolean
-
-services/
-  weatherApi.ts      # Open-Meteo API calls, geocoding, WMO code → label/icon/severity
-  notifications.ts   # Background task, scheduling, DND logic
-  storage.ts         # AsyncStorage helpers (cities, settings, cache)
+components/         # AlertBanner, CityTabs, HourlyStrip, RainBars, WeekForecast
+hooks/              # useWeather, useLocation, useCities, useNotifications, useCommuterAlert
+services/           # weatherApi.ts, notifications.ts, storage.ts
 ```
 
----
+## License
 
-## Known limitations
-
-- **Background fetch on iOS** — minimum interval is ~15 minutes (iOS system constraint, not a bug)
-- **Expo Go** — background fetch and notifications require a dev build to work
-- **App icon** — still the default Expo icon; 1024×1024 PNG not yet added
-- **DND hour range** — stored in AsyncStorage but Settings UI to change it isn't built yet
+MIT
