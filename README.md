@@ -1,128 +1,89 @@
-# SkyCast — Weather That Warns You First
+<h1 align="center">SkyCast</h1>
 
-A cross-platform mobile weather app built with Expo (React Native) and TypeScript.
-SkyCast is **notification-first**: it alerts you about weather changes *before* they happen,
-so you're never caught off guard.
+<p align="center">
+  <strong>A mobile weather app that warns you before the weather changes</strong>
+</p>
 
----
+<p align="center">
+  <img src="https://img.shields.io/badge/Expo-55-000020?style=flat-square&logo=expo" />
+  <img src="https://img.shields.io/badge/TypeScript-5-3178C6?style=flat-square&logo=typescript&logoColor=white" />
+  <img src="https://img.shields.io/badge/Open--Meteo-Free_API-00B4D8?style=flat-square" />
+  <img src="https://img.shields.io/badge/Platform-iOS_%7C_Android-lightgrey?style=flat-square" />
+</p>
 
-## Feature Status
+SkyCast is a cross-platform mobile weather app built with Expo and TypeScript. It is notification-first: it alerts you about weather changes before they happen, so you are never caught off guard.
 
-- [x] Project setup (Expo SDK 55, TypeScript, Expo Router)
-- [x] Design system (colors, typography, dark theme)
-- [x] Weather API service (Open-Meteo, no API key required)
-- [x] Geocoding / city search service
-- [x] WMO weather code mapping (label + icon + severity)
-- [x] AsyncStorage helpers (settings, cities, cache)
-- [x] `useLocation` hook (permission flow, AppState listener)
-- [x] `useWeather` hook (fetch + cache + abort controller)
-- [x] `useCities` hook (persistent city management)
-- [x] `useNotifications` hook (permission + background task)
-- [x] Background fetch task (every 15 min, respects DND)
-- [x] Notification scheduling (alerts, daily digest, UV, temp extremes)
-- [x] Home screen (temperature, condition, hourly, 7-day, alert banner)
-- [x] Search screen (debounced city search, add/saved state)
-- [x] Alerts screen (24h alert list, severity badges)
-- [x] Settings screen (units, activity profile, notification toggles, rain sensitivity)
-- [x] Android notification channel setup on startup
-- [x] Pull-to-refresh on all data screens
-- [x] Skeleton loading states (no spinners)
-- [x] Graceful error handling on all screens
-- [x] Onboarding flow (welcome → location explanation → permission)
-- [x] Commuter mode (home vs work city weather diff alert)
-- [x] Daily digest time picker UI
+No API key required. SkyCast uses Open-Meteo, a free and open weather API with no sign-up needed.
 
----
+## Features
 
-## How to Run Locally
+- **Smart alerts** — Background weather checks every 15 minutes. Get notified before rain, UV spikes, or temperature extremes hit.
+- **Hourly and 7-day forecasts** — Scrollable hourly strip, rain probability bar chart, and a full week forecast.
+- **Multi-city support** — Add, remove, and switch between saved cities with a scrollable tab bar.
+- **Commuter mode** — Compare home and work city weather in a single glance.
+- **Daily digest** — A morning summary of what to expect for the day, delivered at your chosen time.
+- **Customisable settings** — Toggle notification types, switch between metric and imperial units, set an activity profile, and adjust rain sensitivity.
+- **Skeleton loading states** — No spinners. Content areas animate in as data loads.
+- **Dark theme** — Designed for readability in any lighting condition.
+
+## Tech stack
+
+| Layer | Technology |
+|---|---|
+| Framework | Expo SDK 55 + Expo Router |
+| Language | TypeScript |
+| Weather data | Open-Meteo (free, no API key) |
+| Background tasks | Expo Background Fetch + Task Manager |
+| Notifications | Expo Notifications |
+| Storage | AsyncStorage |
+
+## Getting started
 
 ### Prerequisites
+
 - Node.js 18+
-- Expo CLI: `npm install -g expo-cli` (optional — npx works too)
-- Expo Go app on your phone **or** an iOS Simulator / Android Emulator
+- Expo Go on your phone, or an iOS Simulator / Android Emulator
 
-### Install dependencies
+### Install and run
+
 ```bash
+git clone https://github.com/aayanareejo1/skycast-weather.git
+cd skycast-weather
 npm install
-```
-
-### Start the dev server
-```bash
 npx expo start
 ```
 
-Then:
-- Press `i` for iOS Simulator
-- Press `a` for Android Emulator
-- Scan the QR code with Expo Go on your phone
+Then press `i` for iOS Simulator, `a` for Android Emulator, or scan the QR code with Expo Go.
 
 ### TypeScript check
+
 ```bash
 npx tsc --noEmit
 ```
 
----
+No `.env` file is needed. All weather API calls go directly to Open-Meteo with no authentication.
 
-## Weather API
-
-**Open-Meteo** — [https://open-meteo.com](https://open-meteo.com)
-
-- Completely **free**, no API key, no sign-up required
-- Provides current conditions, hourly forecasts (up to 7 days), and daily summaries
-- Includes a geocoding endpoint for city search
-- Used for: current weather, 8-hour hourly strip, rain bar chart, 7-day forecast, alert detection
-
-No `.env` file needed. All API calls are made directly from `services/weatherApi.ts`.
-
----
-
-## Folder Structure
+## Project structure
 
 ```
 app/
-  _layout.tsx       # Root layout: fonts, tab bar, notification channel setup
-  index.tsx         # Home screen: current weather, hourly, 7-day, alert banner
-  search.tsx        # City search + add to saved cities
-  alerts.tsx        # 24-hour weather alerts for all saved cities
-  settings.tsx      # Notification toggles, units, activity profile, rain sensitivity
+  _layout.tsx       # Root layout, tab bar, notification channel setup
+  index.tsx         # Home screen, current weather, hourly, 7-day, alert banner
+  search.tsx        # City search and saved cities
+  alerts.tsx        # 24-hour alert list for all saved cities
+  settings.tsx      # Notification toggles, units, activity profile
 
-components/
-  AlertBanner.tsx       # Amber banner for upcoming weather changes
-  HourlyStrip.tsx       # Horizontal scrollable hourly forecast
-  RainBars.tsx          # Bar chart showing rain probability by hour
-  WeekForecast.tsx      # 7-day forecast list (FlatList with useCallback)
-  CityTabs.tsx          # Scrollable city switcher tabs
-  SkeletonLoader.tsx    # Animated opacity skeleton (no spinners)
-  NotificationToggle.tsx # Labeled switch row for settings
-
-hooks/
-  useWeather.ts         # Fetch + cache weather data with AbortController
-  useLocation.ts        # Location permission + coords + AppState listener
-  useCities.ts          # AsyncStorage city management (add/remove/reorder)
-  useNotifications.ts   # Notification permission + background task registration
-
-services/
-  weatherApi.ts     # All Open-Meteo API calls + WMO code mapping
-  notifications.ts  # Background task definition + scheduling logic
-  storage.ts        # AsyncStorage helpers (cities, settings, cache)
-
-constants/
-  colors.ts         # Dark theme color palette
-  config.ts         # Cache TTL, max cities, fetch intervals, thresholds
+components/         # AlertBanner, HourlyStrip, RainBars, WeekForecast, CityTabs
+hooks/              # useWeather, useLocation, useCities, useNotifications
+services/           # weatherApi.ts, notifications.ts, storage.ts
+constants/          # colors.ts, config.ts
 ```
 
----
+## Notes
 
-## Known Issues / Limitations
+- Background fetch on iOS has a minimum interval of roughly 15 minutes regardless of the configured value. This is an iOS system limitation.
+- Some notification and background fetch features require a development build and are silently unavailable in Expo Go.
 
-- **Background fetch on iOS**: Minimum interval is ~15 minutes regardless of configured value. Real-time background updates are not possible on iOS — this is an iOS system limitation.
-- **Expo Go**: Background fetch and some notification features require a development build (`npx expo run:ios` or `npx expo run:android`) — they are silently unavailable in Expo Go.
-- **Slider on Android**: Uses `@react-native-community/slider` which requires a native build for full functionality.
-- **Onboarding flow**: Not yet implemented — app goes directly to home screen on first launch.
-- **Commuter mode**: Saved cities support `commuterMode` flag but the differential alert logic is not yet wired up.
+## License
 
----
-
-## Last Updated
-
-2026-03-18 (commuter mode + daily digest time picker added)
+MIT
